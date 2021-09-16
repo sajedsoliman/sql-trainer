@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useEffect, useReducer, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 
 // zustand
 import State from "../store/global.store";
@@ -18,142 +18,127 @@ import {
 	TableContainer,
 	TableHead,
 	TableRow,
-	TextField,
 	Typography,
 } from "@mui/material";
 
-// hooks
-import useToggle from "@/hooks/useToggle";
+// utils
+import ReactHtmlParser from "react-html-parser";
+
+// types
 import { Table as TableType } from "@/types/types";
+
+// hooks
 import { getArrayPartial } from "@/utils/functions";
 
-const SelectQueryOpts = ({}: {}) => {
-	const { workspace } = State((state) => state);
+const SelectQueryOpts = ({ table }: { table: TableType }) => {
+	// const { table } = State((state) => state);
 
 	// state vars
-	const [tableName, setTableName] = useState("");
-	const [table, setTable] = useState<TableType | null>(null);
 	const [tableAttributes, setTableAttributes] = useState<string[]>([]);
 
-	// handle change table name input
-	const handleChangeTableName = (e: ChangeEvent<HTMLInputElement>) => {
-		const tblName: string = e.target.value;
-
-		setTableName(tblName);
-	};
-
-	// listen for table name input change to show additional controls if the provided table name is existed
 	useEffect(() => {
-		const selectedTable = workspace.find((table) => table.name === tableName);
+		if (table) setTableAttributes(table.schema.map((item) => item.attribute));
+	}, [table]);
 
-		if (selectedTable) {
-			setTable(selectedTable);
+	const getCodeResult = () => {
+		const isAllAttrs =
+			tableAttributes.length === table.schema.length ||
+			tableAttributes.length === 0;
 
-			// show the table with its all attributes
-			setTableAttributes(selectedTable.schema.map((item) => item.attribute));
-		} else {
-			setTable(null);
-		}
-	}, [tableName]);
+		return `select ${
+			isAllAttrs ? "*" : tableAttributes.join(", ")
+		} from <strong>${table.name}</strong>`;
+	};
 
 	return (
 		<div>
 			{/* controls */}
 			<div>
-				<Typography variant="h5" mb={2} fontWeight={550}>
+				<Typography variant="h5" my={2} fontWeight={550}>
 					Controls
 				</Typography>
-				<Box display="flex">
-					{/* table name */}
-					<TextField
-						label="Table Name"
-						size="small"
-						value={tableName}
-						onChange={handleChangeTableName}
-						helperText={!table && tableName !== "" && "Table does not exist"}
-						error={!table && tableName !== ""}
-					/>
 
+				<div>
 					{/* table attributes => multi select box */}
-					{table && (
-						<FormControl sx={{ ml: 2, minWidth: 250 }}>
-							<InputLabel>Attributes</InputLabel>
-							<Select
-								size="small"
-								multiple
-								value={tableAttributes}
-								onChange={(e) =>
-									setTableAttributes(
-										typeof e.target.value === "string"
-											? e.target.value.split(",")
-											: e.target.value
-									)
-								}
-								input={<OutlinedInput label="Attributes" />}
-							>
-								{table?.schema.map((item) => {
-									return (
-										<MenuItem key={item.attribute} value={item.attribute}>
-											{item.attribute}
-										</MenuItem>
-									);
-								})}
-							</Select>
-						</FormControl>
-					)}
-				</Box>
+					<FormControl sx={{ ml: 2, minWidth: 250 }}>
+						<InputLabel id="table-attributes-select">Attributes</InputLabel>
+						<Select
+							labelId="table-attributes-select"
+							size="small"
+							multiple
+							value={tableAttributes}
+							onChange={(e) =>
+								setTableAttributes(
+									typeof e.target.value === "string"
+										? e.target.value.split(",")
+										: e.target.value
+								)
+							}
+							input={<OutlinedInput label="Attributes" />}
+						>
+							{table.schema.map((item) => {
+								return (
+									<MenuItem key={item.attribute} value={item.attribute}>
+										{item.attribute}
+									</MenuItem>
+								);
+							})}
+						</Select>
+					</FormControl>
+				</div>
 			</div>
 
 			{/* result */}
 			<div>
-				<Typography mt={3} variant="h5" mb={2} fontWeight={550}>
+				<Typography mt={3} variant="h5" fontWeight={550}>
 					Result
 				</Typography>
-				{table && (
-					<div>
-						<Typography variant="h5" fontWeight={550} align="center" mb={1}>
-							{tableName}
-						</Typography>
-						<TableContainer component={Paper} variant="outlined">
-							<Table>
-								<TableHead>
-									<TableRow>
-										{(tableAttributes.length === 0
-											? table.schema
-											: getArrayPartial(
-													table.schema,
-													"attribute",
-													tableAttributes
-											  )
-										).map((item) => (
-											<TableCell key={item.attribute}>
-												{item.attribute}
-											</TableCell>
-										))}
-									</TableRow>
-								</TableHead>
-								<TableBody>
-									{table.data.map((instance) => (
-										<TableRow key={instance[0]}>
-											{(tableAttributes.length === 0
-												? table.schema
-												: getArrayPartial(
-														table.schema,
-														"attribute",
-														tableAttributes
-												  )
+				<div>
+					<Typography variant="h5" fontWeight={550} align="center" mb={1}>
+						{table.name}
+					</Typography>
+
+					{/* visual result */}
+					<TableContainer component={Paper} variant="outlined" sx={{ mb: 3 }}>
+						<Table>
+							<TableHead>
+								<TableRow>
+									{getArrayPartial(
+										table.schema,
+										"attribute",
+										tableAttributes
+									).map((item) => (
+										<TableCell key={item.attribute}>{item.attribute}</TableCell>
+									))}
+								</TableRow>
+							</TableHead>
+							<TableBody>
+								{table.data.map((instance) => {
+									return (
+										<TableRow
+											key={instance[table.schema[0].attribute].toString()}
+										>
+											{getArrayPartial(
+												table.schema,
+												"attribute",
+												tableAttributes
 											).map((item) => (
-												<TableCell key={instance[item.attribute]}>
+												<TableCell
+													key={`${item.attribute}-${instance[item.attribute]}`}
+												>
 													{instance[item.attribute]}
 												</TableCell>
 											))}
 										</TableRow>
-									))}
-								</TableBody>
-							</Table>
-						</TableContainer>
-					</div>
-				)}
+									);
+								})}
+							</TableBody>
+						</Table>
+					</TableContainer>
+
+					{/* code result */}
+					<code>{ReactHtmlParser(getCodeResult())}</code>
+				</div>
 			</div>
 		</div>
 	);

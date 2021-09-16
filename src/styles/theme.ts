@@ -4,6 +4,13 @@ const theme = createTheme({
 	typography: {
 		fontFamily: "Poppins",
 	},
+	components: {
+		MuiTextField: {
+			defaultProps: {
+				size: "small",
+			},
+		},
+	},
 });
 
 export default theme;

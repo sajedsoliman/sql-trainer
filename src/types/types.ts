@@ -2,7 +2,7 @@ export enum QueryType {
 	Select,
 	Insert,
 	Delete,
-	Update,
+	Create,
 }
 
 export type SchemaItem = {

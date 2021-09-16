@@ -1,1 +1,1 @@
-export const queryTypes = ["Select", "Insert", "Delete", "Update"];
+export const queryTypes = ["Select", "Insert", "Delete", "Create"];
